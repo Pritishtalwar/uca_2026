@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Users</title>
+</head>
+<body>
+<div id="users"></div>
+
+<script>
+const workerCode = `
+self.onmessage = async function() {
+    try {
+        const response = await fetch("https://dummyapi.com/users");
+
+        if (!response.ok)
+            throw new Error("Request failed");
+
+        const users = await response.json();
+
+        if (!users || users.length === 0) {
+            self.postMessage({ error: "No users found" });
+            return;
+        }
+
+        self.postMessage({ users: users });
+    } catch (e) {
+        self.postMessage({ error: e.message });
+    }
+};
+`;
+
+const blob = new Blob([workerCode], { type: "application/javascript" });
+const worker = new Worker(URL.createObjectURL(blob));
+
+worker.onmessage = function(e) {
+    const div = document.getElementById("users");
+
+    if (e.data.error) {
+        div.innerHTML = e.data.error;
+        return;
+    }
+
+    div.innerHTML = "";
+
+    e.data.users.forEach(user => {
+        const p = document.createElement("p");
+        p.textContent = user.name + " - " + (user.active ? "Active" : "Inactive");
+        div.appendChild(p);
+    });
+};
+
+worker.postMessage("start");
+</script>
+
+</body>
+</html>
